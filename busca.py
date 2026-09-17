@@ -39,14 +39,15 @@ def busca(problema: Problema, funcao_f: Callable, limite_tempo: float = 60.0,
     """funcao_f(g, h) decide a prioridade de cada nó — é o único ponto
     que muda entre UCS, Gulosa e A*."""
     inicio = time.perf_counter()
-    desempate = count()  # evita comparar 'estado' quando o heap empata em prioridade
+    desempate = count()  # desempata no heap sem comparar 'estado' (que nao tem <)
 
     g0 = 0
     h0 = problema.heuristica(problema.estado_inicial)
     no_inicial = {"estado": problema.estado_inicial, "g": g0, "caminho": []}
 
+    # fronteira = fila de prioridade (heap) por f(g,h); cada item = (f, desempate, no)
     fronteira = [(funcao_f(g0, h0), next(desempate), no_inicial)]
-    melhor_g_conhecido = {problema.estado_inicial: g0}
+    melhor_g_conhecido = {problema.estado_inicial: g0}  # estado -> menor g ja visto
 
     nos_gerados = 1
     nos_expandidos = 0
@@ -58,10 +59,10 @@ def busca(problema: Problema, funcao_f: Callable, limite_tempo: float = 60.0,
                                    nos_gerados=nos_gerados, tempo=tempo_decorrido,
                                    motivo=f"não concluiu em {limite_tempo:.0f}s")
 
-        _, _, no = heapq.heappop(fronteira)
+        _, _, no = heapq.heappop(fronteira)  # tira o de menor f() da fila
         estado = no["estado"]
 
-        # entrada obsoleta: já achamos um caminho melhor para este estado
+        # entrada obsoleta: ja achamos um caminho melhor pra esse estado depois
         if no["g"] > melhor_g_conhecido.get(estado, math.inf):
             continue
 
@@ -71,13 +72,14 @@ def busca(problema: Problema, funcao_f: Callable, limite_tempo: float = 60.0,
                                    nos_expandidos=nos_expandidos, nos_gerados=nos_gerados,
                                    tempo=tempo_total)
 
-        nos_expandidos += 1
+        nos_expandidos += 1  # so conta aqui: no que foi retirado e vai gerar filhos
         if limite_nos is not None and nos_expandidos > limite_nos:
             tempo_total = time.perf_counter() - inicio
             return ResultadoBusca(sucesso=False, nos_expandidos=nos_expandidos,
                                    nos_gerados=nos_gerados, tempo=tempo_total,
                                    motivo=f"excedeu limite de {limite_nos} nós expandidos")
 
+        # gera os filhos (sucessores) e so poe na fila se for um caminho melhor
         for movimento, novo_estado, custo_passo in problema.sucessores(estado):
             novo_g = no["g"] + custo_passo
             if novo_g < melhor_g_conhecido.get(novo_estado, math.inf):
@@ -86,7 +88,7 @@ def busca(problema: Problema, funcao_f: Callable, limite_tempo: float = 60.0,
                 novo_no = {"estado": novo_estado, "g": novo_g,
                            "caminho": no["caminho"] + [movimento]}
                 heapq.heappush(fronteira, (funcao_f(novo_g, h), next(desempate), novo_no))
-                nos_gerados += 1
+                nos_gerados += 1  # conta aqui: no criado e colocado na fila
 
     tempo_total = time.perf_counter() - inicio
     return ResultadoBusca(sucesso=False, nos_expandidos=nos_expandidos,

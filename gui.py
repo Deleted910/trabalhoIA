@@ -139,6 +139,8 @@ class AppHanoi:
     # ---------------- desenho do tabuleiro ----------------
 
     def desenhar_tabuleiro(self):
+        # redesenha TUDO do zero a cada chamada -- simples e rapido o
+        # suficiente pra esse tamanho de tabuleiro
         c = self.canvas
         c.delete("all")
         n = len(self.estado)
@@ -155,15 +157,17 @@ class AppHanoi:
 
         # discos, pino a pino
         for p in range(3):
+            # ordem decrescente: disco maior (indice maior) desenhado primeiro, embaixo
             discos_no_pino = sorted((d for d in range(n) if self.estado[d] == p), reverse=True)
             for nivel, d in enumerate(discos_no_pino):
                 # disco 0 = o menor (largura minima), disco n-1 = o maior (largura maxima)
                 largura = DISCO_LARG_MIN + (DISCO_LARG_MAX - DISCO_LARG_MIN) * (
                     0 if n <= 1 else d / (n - 1))
                 x_centro = peg_xs[p]
-                y_baixo = BASE_Y - nivel * (DISCO_ALTURA + 2)
+                y_baixo = BASE_Y - nivel * (DISCO_ALTURA + 2)  # nivel 0 = encostado na base
                 y_cima = y_baixo - DISCO_ALTURA
                 cor = cor_disco(d, n)
+                # disco em movimento fica com borda vermelha grossa
                 contorno = COR_DESTAQUE if d == self.disco_destacado else "#d8cdb8"
                 largura_contorno = 3 if d == self.disco_destacado else 1
                 c.create_rectangle(x_centro - largura / 2, y_cima, x_centro + largura / 2, y_baixo,
@@ -190,10 +194,12 @@ class AppHanoi:
         self.passo_idx = 0
         self.disco_destacado = None
 
+        # roda os 3 de uma vez -- so assim da pra comparar os 3 no painel
         self.resultados = {}
         for alg in ("UCS", "Gulosa", "A*"):
             self.resultados[alg] = resolver(n, algoritmo=alg, limite_tempo=30.0, limite_nos=2_000_000)
 
+        # mas so o escolhido no combobox e usado pra animar
         alg_escolhido = self.algoritmo_animar.get()
         resultado = self.resultados[alg_escolhido]
         self.movimentos = resultado.caminho if resultado.sucesso else []
@@ -240,19 +246,22 @@ class AppHanoi:
             return
         self.pausado = not self.pausado
         if self.pausado:
-            # cancela o passo já agendado, senão ele roda mesmo pausado
+            # cancela o passo ja agendado, senao ele roda mesmo pausado
             if self._job_id is not None:
                 self.root.after_cancel(self._job_id)
                 self._job_id = None
             self.btn_pausar.config(text="▶ Continuar")
         else:
             self.btn_pausar.config(text="⏸ Pausar")
+            # retoma exatamente a chamada que estava guardada em _agendar
             if self._proxima_chamada is not None:
                 callback, args = self._proxima_chamada
                 self._job_id = self.root.after(30, callback, *args)
 
     def _agendar(self, delay, callback, *args):
-        self._proxima_chamada = (callback, args)
+        # todo passo da animacao passa por aqui -- e o unico lugar que
+        # chama root.after(), pra pausar/continuar poder controlar tudo
+        self._proxima_chamada = (callback, args)  # guarda mesmo se pausado
         if not self.pausado:
             self._job_id = self.root.after(delay, callback, *args)
 
@@ -267,6 +276,7 @@ class AppHanoi:
             self.btn_pausar.config(state="disabled", text="⏸ Pausar")
             return
 
+        # mostra o disco destacado (ainda no lugar antigo) antes de mover
         mov = self.movimentos[self.passo_idx]
         self.disco_destacado = mov[0]
         self.desenhar_tabuleiro()
@@ -277,6 +287,8 @@ class AppHanoi:
         self._agendar(max(30, delay // 2), self._aplicar_movimento, mov)
 
     def _aplicar_movimento(self, mov):
+        # aplica o movimento de verdade e chama _animar_proximo de novo
+        # -- essas duas funcoes vao se chamando ate acabar self.movimentos
         self.estado = hanoi.aplicar_movimento(self.estado, mov)
         self.passo_idx += 1
         self.desenhar_tabuleiro()

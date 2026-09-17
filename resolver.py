@@ -19,7 +19,9 @@ ALGORITMOS = {
 
 
 def montar_problema(n_discos, pino_destino=2):
+    # essas 3 funcoes so "traduzem" o hanoi.py pro formato que o busca.py espera
     def sucessores(estado):
+        # cada movimento legal vira (movimento, novo_estado, custo=1)
         return [(mov, hanoi.aplicar_movimento(estado, mov), 1)
                 for mov in hanoi.movimentos_legais(estado)]
 
@@ -36,6 +38,7 @@ def montar_problema(n_discos, pino_destino=2):
 
 def resolver(n_discos, algoritmo="A*", limite_tempo=60.0, limite_nos=None,
              pino_destino=2):
+    # ALGORITMOS[algoritmo] escolhe o f certo (f_ucs/f_gulosa/f_astar)
     problema = montar_problema(n_discos, pino_destino)
     return busca(problema, ALGORITMOS[algoritmo], limite_tempo=limite_tempo,
                  limite_nos=limite_nos)

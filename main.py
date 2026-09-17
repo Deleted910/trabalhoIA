@@ -28,7 +28,7 @@ def demonstracao(n_discos=4):
     otimo = custo_otimo_conhecido(n_discos)
     print(f"Gabarito conhecido (fórmula 2^n - 1): {otimo} movimentos\n")
 
-    resultados = {}
+    resultados = {}  # guarda os 3 resultados pra reaproveitar o do A* depois
     for alg in ("UCS", "Gulosa", "A*"):
         r = resultados[alg] = resolver(n_discos, algoritmo=alg, limite_tempo=LIMITE_TEMPO)
         if r.sucesso:
@@ -38,7 +38,7 @@ def demonstracao(n_discos=4):
         else:
             print(f"{alg:8s} -> {r.motivo}")
 
-    caminho = resultados["A*"].caminho
+    caminho = resultados["A*"].caminho  # ja rodado no loop acima, nao roda de novo
     print(f"\nSequência de movimentos (A*), {len(caminho)} no total:")
     for i, mov in enumerate(caminho, 1):
         print(f"  {i:2d}. {hanoi.texto_movimento(mov)}")
@@ -52,9 +52,9 @@ def roda_benchmark():
           f"{'Nós exp.':>9s} | {'Tempo (s)':>10s}")
     print("-" * 70)
 
-    for n in FAIXA_BENCHMARK:
+    for n in FAIXA_BENCHMARK:  # 3 a 10 discos
         otimo = custo_otimo_conhecido(n)
-        for alg in ("UCS", "Gulosa", "A*"):
+        for alg in ("UCS", "Gulosa", "A*"):  # os 3 algoritmos, pra cada n
             r = resolver(n, algoritmo=alg, limite_tempo=LIMITE_TEMPO, limite_nos=3_000_000)
             if r.sucesso:
                 ok = "sim" if r.custo == otimo else "NÃO (!)"
